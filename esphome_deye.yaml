@@ -1,0 +1,887 @@
+substitutions:
+  device_name: deye
+
+esphome:
+  name: ${device_name}
+  platformio_options:
+    platform: https://github.com/platformio/platform-espressif32.git#feature/arduino-upstream
+    platform_packages:
+      - framework-arduinoespressif32 @ https://github.com/espressif/arduino-esp32.git#2.0.0
+    build_flags: 
+      - -DCONFIG_ARDUINO_LOOP_STACK_SIZE=32768
+
+esp32:
+  board: az-delivery-devkit-v4
+  framework:
+    type: arduino
+
+wifi:
+  ssid: !secret ssid
+  password: !secret wifi_password
+  manual_ip:
+   static_ip: 192.168.123.224
+   gateway: 192.168.123.1
+   subnet: 255.255.255.0
+
+logger:
+
+api:
+  encryption:
+    key: "FtnkzgWnJDiSOgq8s58wT6ssx0jcduzWmPAPT4od7Wo="
+
+ota:
+  password: "6d93066ef45a27b0b0ebaeef5728de2f"
+
+# web server
+web_server:
+
+switch:
+  - platform: restart
+    name: "Restart"
+
+mqtt:
+  broker: !secret broker
+  port: !secret broker_port
+  topic_prefix: deye_rs485
+  username: !secret broker_username
+  password: !secret broker_password
+  log_topic:
+    topic: debug
+    level: NONE
+
+uart:
+  id: mod_bus
+  baud_rate: 9600
+  tx_pin: GPIO17  # TX2
+  rx_pin: GPIO16  # RX2
+  stop_bits: 1
+
+modbus:
+  id: modbus1
+
+modbus_controller:
+  - id: epever
+    address: 1
+    modbus_id: modbus1
+    setup_priority: -10
+    command_throttle: 0ms
+    update_interval: 15s
+
+sensor:
+  - platform: wifi_signal
+    name: "modbus rssi"
+    update_interval: 3600s
+
+  ############################# String ########################
+    
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:solar-power
+    name: "${device_name} string 1 watios"
+    id: string1
+    address: 186
+    unit_of_measurement: "W"
+    register_type: holding
+    value_type: U_WORD
+    #state_topic: Inverter/MPPT1_Watts
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:solar-power
+    name: "${device_name} string 2 watios"
+    #state_topic: Inverter/MPPT2_Watts
+    id: string2
+    address: 187
+    unit_of_measurement: "W"
+    register_type: holding
+    value_type: U_WORD
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:solar-power
+    name: "${device_name} string 1 voltaje"
+    #state_topic: Inverter/MPPT1_Volts
+    address: 109
+    unit_of_measurement: "V"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:solar-power
+    name: "${device_name} string 2 volataje"
+    #state_topic: Inverter/MPPT2_Volts
+    address: 111
+    unit_of_measurement: "V"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:solar-power
+    name: "${device_name} string 1 amperios"
+    #state_topic: Inverter/MPPT1_Amps
+    address: 110
+    unit_of_measurement: "A"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:solar-power
+    name: "${device_name} string 2 amperios"
+    #state_topic: Inverter/MPPT2_Amps
+    address: 112
+    unit_of_measurement: "A"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+  - platform: template
+    name: "${device_name} produccion"
+    #state_topic: Inverter/PvWattsTotal
+    unit_of_measurement: "W"
+        #            string1    +     string2      +   puerto gen
+    lambda: |-
+      return (id(string1).state + id(string2).state + id(gen).state); 
+    accuracy_decimals: 0
+    update_interval: 10s
+      
+  - platform: modbus_controller     #
+    modbus_controller_id: epever    #
+    icon: mdi:solar-power           #
+    name: "${device_name} Gen watios"  ######## puerto gen
+    id: gen                         #
+    address: 166                    #
+    unit_of_measurement: "W"        #
+    register_type: holding          #
+    value_type: U_WORD              #
+
+ 
+########################### AC ##############
+
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:transmission-tower-export
+    name: "${device_name} Red"
+    #state_topic: Inverter/GridWatts
+    id: ${device_name}_red
+    address: 170
+    unit_of_measurement: "W"
+    register_type: holding
+    value_type: S_WORD
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:transmission-tower-export
+    name: "${device_name} inverter outputs l1 power"
+    address: 173
+    unit_of_measurement: "W"
+    register_type: holding
+    value_type: S_WORD
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:transmission-tower-export
+    name: "${device_name} voltaje"
+    address: 150
+    unit_of_measurement: "V"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:transmission-tower-export
+    name: "${device_name} amperios"
+    address: 164
+    unit_of_measurement: "A"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.01
+  # - platform: modbus_controller
+  #   modbus_controller_id: epever
+  #   icon: mdi:lightning-bolt-outline
+  #   name: "${device_name} consumo casa 1"
+  #   address: 176
+  #   unit_of_measurement: "w"
+  #   register_type: holding
+  #   value_type: U_WORD
+  # - platform: modbus_controller
+  #   modbus_controller_id: epever
+  #   icon: mdi:lightning-bolt-outline
+  #   name: "${device_name} consumo casa 2"
+  #   address: 177
+  #   unit_of_measurement: "w"
+  #   register_type: holding
+  #   value_type: U_WORD
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:lightning-bolt-outline
+    name: "${device_name} consumo casa"
+    #state_topic: Inverter/LoadWatts
+    address: 178
+    unit_of_measurement: "W"
+    register_type: holding
+    value_type: U_WORD
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:thermometer
+    id: temperatura
+    name: "${device_name} temperatura"  ############### TEMPERATURA #############
+    address: 91
+    unit_of_measurement: "º"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+      - offset: -100
+#    on_value_range:                     #
+#      - above: 48                       #
+#        then:                           #   esto hace activar el rele para 
+#          - switch.turn_on: fan         #   encender y apagar el ventilador auxiliar
+#      - below: 47                       #   enciende cuando sube de 48
+#        then:                           #   apaga cuanda baja de 47
+#          - switch.turn_off: fan        #
+
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:transmission-tower-export
+    name: "${device_name} frecuencia salida"
+    address: 192
+    unit_of_measurement: "hz"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.01
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:transmission-tower-export
+    name: "${device_name} frecuencia grid"
+    address: 79
+    unit_of_measurement: "hz"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.01
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:solar-panel
+    name: "${device_name} produccion diaria"
+    address: 108
+    unit_of_measurement: "KWh"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:solar-panel
+    name: "${device_name} produccion total"
+    address: 96
+    register_count: 2
+    unit_of_measurement: "KWh"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+################# backup #######################
+
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:transmission-tower-export
+    name: "${device_name} Load voltaje"
+    address: 157
+    unit_of_measurement: "V"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+###################### Bateria ############################
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:thermometer
+    name: "${device_name} DC temp"
+    address: 90
+    unit_of_measurement: "º"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+      - offset: -100
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:thermometer
+    name: "${device_name} battery temp"
+    address: 182
+    unit_of_measurement: "º"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+      #- offset: -100 #Se elimina 
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} battery Voltaje"
+    #state_topic: Inverter/BatteryVolts
+    address: 183
+    unit_of_measurement: "V"
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.01
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} battery soc"
+    #state_topic: Inverter/BatterySOC
+    address: 184
+    unit_of_measurement: "%"
+    register_type: holding
+    value_type: U_WORD
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} battery power"
+    #state_topic: Inverter/BatteryWatts
+    address: 190
+    id: battery_pow
+    unit_of_measurement: "W"
+    register_type: holding
+    value_type: S_WORD
+    filters:
+        - multiply: -1
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} battery current"
+    #state_topic: Inverter/BatteryAmps
+    address: 191
+    unit_of_measurement: "A"
+    register_type: holding
+    value_type: S_WORD
+    accuracy_decimals: 2
+    filters:
+      - multiply: 0.01
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery-minus
+    name: "${device_name} Total Battery Discharge"
+    #state_topic: Inverter/BatteryDischarge
+    address: 74
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+  
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery-plus
+    name: "${device_name} Total Battery Charge"
+    #state_topic: Inverter/BatteryCharge
+    address: 72
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    register_type: holding
+    value_type: U_WORD
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+     
+                                          ########################### horarios #########################
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} sell mode time point1"   
+    address: 250
+    register_type: holding
+    value_type: S_WORD
+  # - platform: modbus_controller
+  #   modbus_controller_id: epever
+  #   icon: mdi:battery
+  #   name: "${device_name} sell mode time point 1 voltaje"
+  #   address: 262
+  #   unit_of_measurement: "v"
+  #   register_type: holding
+  #   value_type: S_WORD
+  #   accuracy_decimals: 1
+  #   filters:
+  #     - multiply: 0.01
+
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} sell mode time point2"   ########################### horarios 2 #########################
+    address: 251
+    register_type: holding
+    value_type: S_WORD
+  # - platform: modbus_controller
+  #   modbus_controller_id: epever
+  #   icon: mdi:battery
+  #   name: "${device_name} sell mode time point 2 voltaje"
+  #   address: 263
+  #   unit_of_measurement: "v"
+  #   register_type: holding
+  #   value_type: S_WORD
+  #   accuracy_decimals: 1
+  #   filters:
+  #     - multiply: 0.01
+
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} sell mode time point3"   ########################### horarios 3 #########################
+    address: 252
+    register_type: holding
+    value_type: S_WORD
+  # - platform: modbus_controller
+  #   modbus_controller_id: epever
+  #   icon: mdi:battery
+  #   name: "${device_name} sell mode time point 3 voltaje"
+  #   address: 264
+  #   unit_of_measurement: "v"
+  #   register_type: holding
+  #   value_type: S_WORD
+  #   accuracy_decimals: 1
+  #   filters:
+  #     - multiply: 0.01
+
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} sell mode time point4"   ########################### horarios 4 #########################
+    address: 253
+    register_type: holding
+    value_type: S_WORD
+  # - platform: modbus_controller
+  #   modbus_controller_id: epever
+  #   icon: mdi:battery
+  #   name: "${device_name} sell mode time point 4 voltaje"
+  #   address: 265
+  #   unit_of_measurement: "v"
+  #   register_type: holding
+  #   value_type: S_WORD
+  #   accuracy_decimals: 1
+  #   filters:
+  #     - multiply: 0.01
+
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} sell mode time point5"   ########################### horarios 5 #########################
+    address: 254
+    register_type: holding
+    value_type: S_WORD
+  # - platform: modbus_controller
+  #   modbus_controller_id: epever
+  #   icon: mdi:battery
+  #   name: "${device_name} sell mode time point 5 voltaje"
+  #   address: 266
+  #   unit_of_measurement: "v"
+  #   register_type: holding
+  #   value_type: S_WORD
+  #   accuracy_decimals: 1
+  #   filters:
+  #     - multiply: 0.01
+ 
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} sell mode time point6"   ########################### horarios 6 #########################
+    address: 255
+    register_type: holding
+    value_type: S_WORD
+  # - platform: modbus_controller
+  #   modbus_controller_id: epever
+  #   icon: mdi:battery
+  #   name: "${device_name} sell mode time point 6 voltaje"
+  #   address: 267
+  #   unit_of_measurement: "v"
+  #   register_type: holding
+  #   value_type: S_WORD
+  #   accuracy_decimals: 1
+  #   filters:
+  #     - multiply: 0.01
+
+text_sensor:
+  # - platform: modbus_controller
+  #   modbus_controller_id: epever
+  #   bitmask: 0
+  #   icon: mdi:battery
+  #   register_type: holding
+  #   address: 189
+  #   raw_encode: HEXBYTES
+  #   name: "${device_name} battery status"
+  #   lambda: |-
+  #     uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+  #     switch (value) {
+  #       case 0: return std::string("Cargando");
+  #       case 1: return std::string("Stand-By");
+  #       case 2: return std::string("Descargando");
+  #       default: return std::string("Desconocido");
+  #     }
+  #     return x;
+  - platform: template
+    name: "${device_name} battery status"
+    icon: mdi:battery
+    lambda: |-
+      if (id(battery_pow).state > 0) {
+        return std::string("Cargando");
+      } else if (id(battery_pow).state < 0) {
+        return std::string("Descargando");
+      } else if (id(battery_pow).state == 0) {
+        return std::string("Stand-By");
+      } else {
+        return std::string("Desconocido");
+      }
+  # - platform: modbus_controller
+  #   modbus_controller_id: epever
+  #   bitmask: 0
+  #   icon: mdi:lightning-bolt-outline
+  #   register_type: holding
+  #   address: 195
+  #   raw_encode: HEXBYTES
+  #   name: "${device_name} smartload Enabled status"
+  #   lambda: |-
+  #     uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+  #     switch (value) {
+  #       case 0: return std::string("OFF");
+  #       case 1: return std::string("ON");
+  #       default: return std::string("Desconocido");
+  #     }
+  #     return x;
+  #   skip_updates: 10
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    bitmask: 0
+    register_type: holding
+    address: 194
+    raw_encode: HEXBYTES
+    name: "${device_name} Grid status"
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("OFF-Grid");
+        case 1: return std::string("ON-Grid");
+        default: return std::string("Desconocido");
+      }
+      return x;
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:home-lightning-bolt
+    bitmask: 0
+    register_type: holding
+    address: 59 
+    raw_encode: HEXBYTES
+    name: "${device_name} Running Status"
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Stand-by");
+        case 1: return std::string("Self-checking");
+        case 2: return std::string("Normal");
+        case 3: return std::string("Fallo");
+        default: return std::string("Desconocido");
+      }
+      return x;
+    skip_updates: 10
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:home-lightning-bolt
+    bitmask: 0
+    register_type: holding
+    address: 244   #244,247
+    raw_encode: HEXBYTES
+    name: "${device_name} Work mode"
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Selling First");
+        case 1: return std::string("Zero-Export to Load & Solar Sell");
+        case 2: return std::string("Zero-Export to Home & Solar Sell");
+        case 3: return std::string("Zero-Export to Load");
+        case 4: return std::string("Zero-Export to Home");
+        default: return std::string("Desconocido");
+      }
+      return x;
+    skip_updates: 10
+      
+number:
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    name: "${device_name} limiti maximo power"
+    address: 245
+    unit_of_measurement: "Kw"
+    register_type: holding
+    value_type: U_WORD
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    name: "${device_name} Bateria capacidad"
+    address: 204
+    unit_of_measurement: "AH"
+    register_type: holding
+    value_type: U_WORD
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    name: "${device_name} Max cargar"
+    address: 210
+    unit_of_measurement: "A"
+    register_type: holding
+    value_type: U_WORD
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    name: "${device_name} Max descargar"
+    address: 211
+    unit_of_measurement: "A"
+    register_type: holding
+    value_type: U_WORD
+    use_write_multiple: true
+    skip_updates: 10
+
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} point1 capacity"
+    address: 268
+    unit_of_measurement: "%"
+    register_type: holding
+    value_type: S_WORD
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} sell mode time point1 power"
+    address: 256
+    unit_of_measurement: "W"
+    register_type: holding
+    use_write_multiple: true
+    value_type: S_WORD
+  # - platform: modbus_controller
+  #   modbus_controller_id: epever
+  #   icon: mdi:battery
+  #   name: "${device_name} sell mode time point 1 voltaje"
+  #   address: 262
+  #   unit_of_measurement: "v"
+  #   register_type: holding
+  #   value_type: S_WORD
+  #   use_write_multiple: true
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} point2 capacity"
+    address: 269
+    unit_of_measurement: "%"
+    register_type: holding
+    value_type: S_WORD
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} sell mode time point2 power"
+    address: 257
+    unit_of_measurement: "W"
+    register_type: holding
+    use_write_multiple: true
+    value_type: S_WORD
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} point3 capacity"
+    address: 270
+    unit_of_measurement: "%"
+    register_type: holding
+    value_type: S_WORD
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} sell mode time point3 power"
+    address: 258
+    unit_of_measurement: "W"
+    register_type: holding
+    use_write_multiple: true
+    value_type: S_WORD
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} point4 capacity"
+    address: 271
+    unit_of_measurement: "%"
+    register_type: holding
+    value_type: S_WORD
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} sell mode time point4 power"
+    address: 259
+    unit_of_measurement: "W"
+    register_type: holding
+    use_write_multiple: true
+    value_type: S_WORD
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} point5 capacity"
+    address: 272
+    unit_of_measurement: "%"
+    register_type: holding
+    value_type: S_WORD
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} sell mode time point5 power"
+    address: 260
+    unit_of_measurement: "W"
+    register_type: holding
+    use_write_multiple: true
+    value_type: S_WORD
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} point6 capacity"
+    address: 273
+    unit_of_measurement: "%"
+    register_type: holding
+    value_type: S_WORD
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    modbus_controller_id: epever
+    icon: mdi:battery
+    name: "${device_name} sell mode time point6 power"
+    address: 261
+    unit_of_measurement: "W"
+    register_type: holding
+    use_write_multiple: true
+    value_type: S_WORD
+
+select:
+  - platform: modbus_controller
+    name: "${device_name} Excedentes"
+    address: 247
+    value_type: U_WORD
+    optionsmap:
+      "No Vender": 0
+      "Vender": 1
+    use_write_multiple: true
+    skip_updates: 10
+    
+  - platform: modbus_controller
+    name: "${device_name} point1 charge enable"
+    address: 274
+    value_type: U_WORD
+    optionsmap:
+      "GM": 4
+      "BU": 8
+      "CH": 16
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    name: "${device_name} point2 charge enable"
+    address: 275
+    value_type: U_WORD
+    optionsmap:
+      "GM": 4
+      "BU": 8
+      "CH": 16
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    name: "${device_name} point3 charge enable"
+    address: 276
+    value_type: U_WORD
+    optionsmap:
+      "GM": 4
+      "BU": 8
+      "CH": 16
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    name: "${device_name} point4 charge enable"
+    address: 277
+    value_type: U_WORD
+    optionsmap:
+      "GM": 4
+      "BU": 8
+      "CH": 16
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    name: "${device_name} point5 charge enable"
+    address: 278
+    value_type: U_WORD
+    optionsmap:
+      "GM": 4
+      "BU": 8
+      "CH": 16
+    use_write_multiple: true
+    skip_updates: 10
+  - platform: modbus_controller
+    name: "${device_name} point6 charge enable"
+    address: 279
+    value_type: U_WORD
+    optionsmap:
+      "GM": 4
+      "BU": 8
+      "CH": 16
+    use_write_multiple: true
+    skip_updates: 10
+
+############## Rele para el ventilador auxiliar ########################
+
+#  - platform: gpio
+#    pin: GPIO2
+#    id: relay
+#  - platform: template
+#    icon: "mdi:fan"
+#    id: fan
+#    name: "Fan inversor"
+#    turn_on_action:
+##    - switch.template.publish:
+#        id: fan
+#        state: on
+#    - switch.turn_on: relay
+#    turn_off_action:
+#    - switch.turn_off: relay
+#    - switch.template.publish:
+#        id: fan
+#        state: off
+
+
+
